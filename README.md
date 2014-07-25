@@ -31,8 +31,11 @@ Writes a simple file.
 
 Read a file and pretty print in utf-8 to stdout.
 
-    $   ruby 'save_stream_stl.rb' < /tmp/test.stl
+    $ ruby 'save_stream_stl.rb' < /tmp/test.stl
 
+If everything works, you should seem something like this:
+
+![cli output](test_output.png?raw=true "cli output")
 
 # License
 
