@@ -16,20 +16,22 @@ to srt (SubRipText): [Subtitle Converter](https://github.com/basvodde/subtitle_c
 # Usage
 
 ```ruby
-      EbuStl::StlTools.new do
-         subtitle 0,  10, 'Subtitle from 0s to 10s'
-         subtitle 10, 20, '<color=red>Red color.</color>'
-         output '/path/to/file'
-      end
+EbuStl::StlTools.new do
+    subtitle 0,  10, 'Subtitle from 0s to 10s'
+    subtitle 10, 20, '<color=red>Red color.</color>'
+    output '/path/to/file'
+end
 ```
 
 More examples at the end of save_stream_stl.rb.
 
 Writes a simple file.
- $ ruby 'save_stream_stl.rb' > /tmp/test.stl
+
+    $ ruby 'save_stream_stl.rb' > /tmp/test.stl
 
 Read a file and pretty print in utf-8 to stdout.
-  $   ruby 'save_stream_stl.rb' < /tmp/test.stl
+
+    $   ruby 'save_stream_stl.rb' < /tmp/test.stl
 
 
 # License
