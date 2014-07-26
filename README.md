@@ -1,5 +1,3 @@
-I'll split up the huge file later.
-
 Ebu Stl Subtitle Writer
 =======================
 
@@ -14,6 +12,10 @@ to srt (SubRipText): [Subtitle Converter](https://github.com/basvodde/subtitle_c
 
 
 # Usage
+
+Requires the gem [bindata](https://github.com/dmendel/bindata).
+
+    $ gem install bindata
 
 ```ruby
 EbuStl::StlTools.new do
