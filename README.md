@@ -17,6 +17,8 @@ Requires the gem [bindata](https://github.com/dmendel/bindata).
 
     $ gem install bindata
 
+Write a simple subtitle file:
+
 ```ruby
 EbuStl::StlTools.new do
     subtitle 0,  10, 'Subtitle from 0s to 10s'
