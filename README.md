@@ -5,7 +5,7 @@ Ebu Stl Subtitle Writer
 
 # Purpose
 
-Create stl subtitle file supporting colors, boldface, italics,
+Create subtitles in the stl format. Support colors, boldface, italics,
 underlining; in order to get formatted subtitles on youtube.
 
 You may also be interested in this project, converting subtitles from stl
@@ -27,13 +27,13 @@ More examples at the end of save_stream_stl.rb.
 
 Writes a simple stl file.
 
-    $ ruby 'save_stream_stl.rb' > /tmp/test.stl
+    $ ruby 'stltools.rb' > ./testfiles/writing_test.stl
 
 Reads a file and pretty prints it in utf-8 to stdout.
 
-    $ ruby 'save_stream_stl.rb' < /tmp/test.stl
+    $ ruby 'stltools.rb' < ./testfiles/writing_test.stl
 
-If everything works, you should see something like this:
+If everything works out, you should see something like this:
 
 ![cli output](test_output.png?raw=true "cli output")
 
