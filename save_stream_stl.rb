@@ -88,6 +88,8 @@ module EbuStl
         BOXDRAWINGS = { :bar  => {:hor => "\xe2\x94\x81", :ver => "\xe2\x94\x83"}, #bold
                         :dbar => {:hor => "\xe2\x95\x90", :ver => "\xe2\x95\x91"}, #double
                         :lbar => {:hor => "\xe2\x94\x88", :ver => "\xe2\x94\x8a"}, #light
+                        :tbar => {:hor => "\xe2\x94\x84", :ver => "\xe2\x94\x86"}, #triple
+                        :qbar => {:hor => "\xe2\x94\x88", :ver => "\xe2\x94\x8a"}, #triple
                         :nbar => {:hor => "\xe2\x94\x80", :ver => "\xe2\x94\x82"}, #normal
                         # bold edges
                         :edge => {:tr => "\xe2\x94\x93",
@@ -128,8 +130,8 @@ module EbuStl
             PALETTE         = [ 0xFFFFFF, 0x000000,
                                 0xFF0000, 0x00FF00, 0x0000FF,
                                 0xFFFF00, 0xFF00FF, 0x00FFFF
-                              ]*2
-            
+                              ]
+
             # rgb => h(ue)-s(aturation)-v(alue)
             def self.hsv(hex)
                 return 0.0,0.0,0.0 if hex == 0
@@ -246,7 +248,7 @@ module EbuStl
             if block_given?
                 begin
                     yield io
-                rescue Errno, TypeError, ArgumentError, IOError => e
+                rescue Exception => e
                     raise IOError, e.message, e.backtrace
                 end
                 io.close if needs_closing
@@ -472,6 +474,8 @@ module EbuStl
                 BYTE_TO_UTF8[0xfd] = 0x00c2b2
                 BYTE_TO_UTF8[0xfe] = 0xe296a0
                 BYTE_TO_UTF8[0xff] = 0x00c2a0
+                
+                CHARSET = BYTE_TO_UTF8.join
             end
             
             # Code page 850
@@ -608,6 +612,8 @@ module EbuStl
                 BYTE_TO_UTF8[0xfd] = 0x00c2b2
                 BYTE_TO_UTF8[0xfe] = 0xe296a0
                 BYTE_TO_UTF8[0xff] = 0x00c2a0
+                
+                CHARSET = BYTE_TO_UTF8.join
             end
             
             # Code page 860
@@ -743,6 +749,8 @@ module EbuStl
                 BYTE_TO_UTF8[0xfd] = 0x00c2b2
                 BYTE_TO_UTF8[0xfe] = 0xe296a0
                 BYTE_TO_UTF8[0xff] = 0x00c2a0
+                
+                CHARSET = BYTE_TO_UTF8.join
             end
             
             # Code page 863
@@ -878,6 +886,8 @@ module EbuStl
                 BYTE_TO_UTF8[0xfd] = 0x00c2b2
                 BYTE_TO_UTF8[0xfe] = 0xe296a0
                 BYTE_TO_UTF8[0xff] = 0x00c2a0
+                
+                CHARSET = BYTE_TO_UTF8.join
             end
             
             # Code page 865
@@ -1013,6 +1023,8 @@ module EbuStl
                 BYTE_TO_UTF8[0xfd] = 0x00c2b2
                 BYTE_TO_UTF8[0xfe] = 0xe296a0
                 BYTE_TO_UTF8[0xff] = 0x00c2a0
+                
+                CHARSET = BYTE_TO_UTF8.join
             end  
         end
         module Body
@@ -1123,6 +1135,9 @@ module EbuStl
                 BYTE_TO_UTF8[0xfd] = 0xc5a7
                 BYTE_TO_UTF8[0xfe] = 0xc58b
                 BYTE_TO_UTF8[0xff] = 0xc2ad
+                
+                CHARSET = BYTE_TO_UTF8.join
+                
             end
                 
             # ISO 8859/5-1988
@@ -1230,6 +1245,8 @@ module EbuStl
                 BYTE_TO_UTF8[0xfd] = 0x00c2a7
                 BYTE_TO_UTF8[0xfe] = 0x00d19e
                 BYTE_TO_UTF8[0xff] = 0x00d19f
+                
+                CHARSET = BYTE_TO_UTF8.join
             end
 
             # ISO 8859/6-1987
@@ -1292,6 +1309,8 @@ module EbuStl
                 BYTE_TO_UTF8[0xf0] = 0x00d990
                 BYTE_TO_UTF8[0xf1] = 0x00d991
                 BYTE_TO_UTF8[0xf2] = 0x00d992
+                
+                CHARSET = BYTE_TO_UTF8.join
             end
 
             # ISO 8859/7-1987
@@ -1393,6 +1412,8 @@ module EbuStl
                 BYTE_TO_UTF8[0xfc] = 0x00cf8c
                 BYTE_TO_UTF8[0xfd] = 0x00cf8d
                 BYTE_TO_UTF8[0xfe] = 0x00cf8e
+                
+                CHARSET = BYTE_TO_UTF8.join
             end
 
             # ISO 8859/8-1988
@@ -1461,6 +1482,8 @@ module EbuStl
                 BYTE_TO_UTF8[0xf8] = 0x00d7a8
                 BYTE_TO_UTF8[0xf9] = 0x00d7a9
                 BYTE_TO_UTF8[0xfa] = 0x00d7aa
+                
+                CHARSET = BYTE_TO_UTF8.join
             end
         end
         module ControlCode
@@ -1568,7 +1591,12 @@ module EbuStl
 
         # convert layout to control codes and plain text to given codepage
         # lines must be encoded in (valid) utf-8
-        def self.encode_body(lines, codepage, max_chars, teletext=true, invision=true)
+        def self.encode_body(lines, codepage, max_chars,
+                             delete_empty_lines=true,
+                             trim_spaces=true,
+                             teletext=true,           # (bg)colors, boldface
+                             invision=true)           # italic, unterline
+            # encoded output
             bytes   = ''
             
             # formatting of the last printed character
@@ -1586,47 +1614,65 @@ module EbuStl
             # keep track of the number of printed characters on the current row
             chars = 0
             
+            # youtube does not like empty lines
+            empty_line = true
+                       
+            endl      = ControlCode::NEWLINE
             converter = codepage::HASH_UTF8_TO_BYTE
+            space     = converter["\x20"]
+            charset   = nil
+            filler    = ControlCode::FILLER
             colorizer = Util::Color
             
-            # parse layout
+            # last printable character (excluding control codes)
+            empty_last_char  = space
+
+            # parse layout, add control codes, remove and trim lines
             SimpleParser.each_char(lines.join("\n")) do |type, tag, opt|
                 case type
-                when :chr
-                    # plain text
-                    if opt == "\x0a"
-                        # newline
-                        bytes << ControlCode::NEWLINE
-                        # bold and bgcolor get reset on a newline
+                when :chr # plain text
+                    if opt == "\x0a" # newline
+                        if empty_line && delete_empty_lines
+                            # delete last line, but keep all control codes
+                            charset ||= (codepage::CHARSET+filler+endl)
+                            idx = bytes.rindex(endl) || -1
+                            slice = bytes.slice!(idx+1..-1)
+                            slice.delete!(charset)
+                            bytes << slice
+                        else
+                            bytes << endl
+                        end
+                        # bold and bgcolor attributes get reset on a newline
                         cur_fmt[:b] = ControlCode::DEFAULT_FORMAT[:b]
                         cur_fmt[:bgcolor] = ControlCode::DEFAULT_FORMAT[:bgcolor]
                         needs_reformat = true
-                        # reset chars on current row count
-                        chars = 0
-                        char_limit_reached = false
+                        chars = 0                             # reset char count
+                        empty_line = empty_last_char = true   # trimming spaces
                     else
                         chars += 1
                         # add formatting codes
                         if needs_reformat
                         # (only!) invision codes are getting ignored
                         # (by youtube) after the limit has been reached
-                          bytes << apply_formatting(tags, cur_fmt, teletext, invision && chars<=max_chars )
+                          bytes << apply_formatting(tags, cur_fmt, teletext,
+                                                   invision && chars<=max_chars)
                           needs_reformat = false
                         end
                         # discard characters beyond the row limit
                         if chars <= max_chars
                             # convert to iso
-                            bytes << converter[opt].to_s
-                            # (only!) invision codes are getting ignored
-                            # (by youtube) after the limit has been reached
+                            bytecode = converter[opt]
+                            empty_line = !bytecode || bytecode == space
+                            if bytecode && !(trim_spaces && empty_line && empty_last_char)
+                                bytes << bytecode
+                                empty_last_char = bytecode == space
+                            end
                         end
                     end
-                when :tcl
-                    # closing
+                when :tcl # closing tag
                     needs_reformat = true
                     tags[tag].pop
-                else
-                    # opening
+                else # opening tag
                     needs_reformat = true
                     case tag
                     when :b
@@ -2402,8 +2448,6 @@ module EbuStl
 
     class StlTools
 
-        include Converter
-        
         BEHEADED = true
         
         public
@@ -2427,7 +2471,10 @@ module EbuStl
         # could be added.
         # Raises ArgumentError when lines cannot be  not an array consisting of string.
         # Does not check lines for proper formatting.
-        def push(t1, t2, lines, row=1,
+        def push(t1, t2, lines,
+            row=1,
+            delete_empty_lines = true,
+            trim_spaces = true,
             adjust=BodyNames::JC[BodyOption::JC::CENTERED], 
             cum=BodyNames::CS[BodyOption::CS::NOT_PART_OF_CUMULATIVE_SET])
             
@@ -2468,7 +2515,8 @@ module EbuStl
             lines.map! { |line| line.tr("\n",'').valid_utf8('')}
 
             # apply styling and convert to iso
-            bytes = CodePage::encode_body(lines, @codepage_body, @gsi.mnc.to_i)
+            bytes = CodePage::encode_body(lines, @codepage_body, @gsi.mnc.to_i,
+                                          delete_empty_lines, trim_spaces)
             
             # we are using binary encoding, so it *should* be equal to #length
             # one byte is added because the last block must end on \x8f
@@ -2838,10 +2886,20 @@ module EbuStl
                    
                     of << endl
                     
+                    if block.ebn==255
+                        horl =  bdr[:bar][:hor]
+                        verl = bdr[:comb][:verl]
+                        verr = bdr[:comb][:verr]
+                    else
+                        horl = ' '
+                        verl = bdr[:bar][:ver]
+                        verr = verl
+                    end
+                            
                     #-----------00314/00334------------#
                     if idx != idx_max                  #
-                        of << bdr[:comb][:vernr]       # 
-                        of << bdr[:nbar][:hor]*(bln/2-5)#
+                        of << verr                    # 
+                        of << horl*(bln/2-5)           #
                         of << idx.to_s.rjust(5,'0').   #
                          chars.map{|x|num_sup[x]}.join #
                         of << slash                    #
@@ -2850,9 +2908,9 @@ module EbuStl
                         of << parenthesis_s_left     #
                         of << block.sgn.to_s.rjust(3,'0').
                          chars.map{|x|num_sub[x]}.join #
-                        of << parenthesis_s_right    #
-                        of << bdr[:nbar][:hor] * (bln-bln/2-6)
-                        of << bdr[:comb][:vernl]       #
+                        of << parenthesis_s_right      #
+                        of << horl * (bln-bln/2-6)     #
+                        of << verl                    #
                         of << endl                     #
                     end                                #
                 end
@@ -3299,6 +3357,10 @@ module EbuStl
             rset = TerminalCode::RESET
             eblb = BodyOption::EBN::LAST_BLOCK
             cdpg = @codepage_body::HASH_BYTE_TO_UTF8
+            stdb = bold[stdf[:b]].getbyte(0)
+            stdi = ital[stdf[:i]].getbyte(0)
+            stdu = ulin[stdf[:u]].getbyte(0)
+            stdc = colr[stdf[:color]].getbyte(0)
             endl_glyph = CodePage::SpecialGlyphs::NEWLINE  
             unkn_glyph = CodePage::SpecialGlyphs::UNKNOWN 
             unsp_glyph = CodePage::SpecialGlyphs::UNSUPPORTED_CODE
@@ -3308,13 +3370,13 @@ module EbuStl
             # default style for new subtitles
             styl = stdf.clone
 
-            # final replacement table
-            fsub = []                   #replacement
-            prbl = Array.new(0x100){1}  #length (control characters 0)
+            # final substitution table
+            fsub = []                   # replacement table
+            prbl = Array.new(0x100){1}  # printabLe character length
             0x100.times do |int|
                 char = [int].pack('C')
-                if defn[char]
-                    if code = b2cd[char] && colors
+                if defn[char] # defined control code
+                    if (code = b2cd[char]) && colors
                         fsub[int] = prfx + b2cd[char] + sufx
                         prbl[int] = 0
                     elsif char == nwbg
@@ -3324,10 +3386,20 @@ module EbuStl
                     end
                 elsif char == endl
                     # bold and background resets upon line break
-                    fsub[int] = prfx + tcbd[false] + sufx + prfx + tcbg[:black] + sufx + endl_glyph
+                    if colors
+                      fsub[int] = prfx + tcbd[false] + sufx + prfx + tcbg[:black] + sufx
+                    else
+                      # no terminal codes at all
+                      fsub[int] = endl_glyph
+                    end
                 elsif char== fill
                     # filler (unused data) should not be styled
-                    fsub[int] = prfx + rset + sufx + fill_glyph
+                    if colors
+                      fsub[int] = prfx + rset + sufx + fill_glyph
+                    else
+                      # no terminal codes at all
+                      fsub[int] = fill_glyph
+                    end
                 elsif utf8 = cdpg[char]
                     fsub[int] = utf8
                 else
@@ -3339,11 +3411,11 @@ module EbuStl
             # For all styling attributes, saves the most recent time it changed.
             # Eg, when stch[_bold_on] > stch[_bold_off], => text currently bold.
             stch = Array.new(0x100){0}
-            stch[bold[stdf[:b]].getbyte(0)]     = 1
-            stch[ital[stdf[:i]].getbyte(0)]     = 2
-            stch[ulin[stdf[:u]].getbyte(0)]     = 3
-            stch[colr[stdf[:color]].getbyte(0)] = 4
-            stid                                = 5
+            stid       = 0
+            stch[stdb] = (stid+=1)
+            stch[stdi] = (stid+=1)
+            stch[stdu] = (stid+=1)
+            stch[stdc] = (stid+=1)
 
             # background color support impossible with a static substitution
             # may be slow when there are many background color changes
@@ -3353,6 +3425,7 @@ module EbuStl
                          prfx + tcbg[curr_bg_color] + sufx
                      end
                    }
+            dnmc[nwbg.getbyte(0)] = nil unless colors
             dnmc.default = lambda{|x|}
             
             tti.each_with_index do |block, idx|
@@ -3387,12 +3460,18 @@ module EbuStl
                 end[0]
 
                 # only the subtitle text should be styled
-                fmt << prfx << rset << sufx
+                fmt << prfx << rset << sufx if colors
             
                 yield block, idx, fmt, nprt
                 
                 # reset styling when subtitle ends
-                styl = stdf.clone if block.ebn == eblb
+                if block.ebn == eblb
+                    styl = stdf.clone
+                    stch[stdb] = (stid+=1)
+                    stch[stdi] = (stid+=1)
+                    stch[stdu] = (stid+=1)
+                    stch[stdc] = (stid+=1)
+                end
             end
         end
     end
@@ -3418,7 +3497,7 @@ if caller.empty? &&  !avail[0].empty? && !avail[1].empty?
     #   stl   = EbuStl::StlTools.read($stdin)
     # Which fails because some programs just ignore the header.
     # Use the below to skip the header and use the default one.
-    stl   = EbuStl::StlTools.read($stdin,EbuStl::StlTools::BEHEADED)
+    stl   = EbuStl::StlTools.read($stdin, EbuStl::StlTools::BEHEADED)
     stl.pprint($stdout)
     
     

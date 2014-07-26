@@ -25,15 +25,15 @@ end
 
 More examples at the end of save_stream_stl.rb.
 
-Writes a simple file.
+Writes a simple stl file.
 
     $ ruby 'save_stream_stl.rb' > /tmp/test.stl
 
-Read a file and pretty print in utf-8 to stdout.
+Reads a file and pretty prints it in utf-8 to stdout.
 
     $ ruby 'save_stream_stl.rb' < /tmp/test.stl
 
-If everything works, you should seem something like this:
+If everything works, you should see something like this:
 
 ![cli output](test_output.png?raw=true "cli output")
 
