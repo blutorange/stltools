@@ -64,9 +64,6 @@ module EbuStl
             tci, tco = to_timecode(t1,t2)
             
             # text field
-            
-            # clean extra newlines and coerce input into valid utf8 encoding
-            lines.map! { |line| line.tr("\n",'').valid_utf8('')}
 
             # apply styling and convert to iso
             bytes = CodePage::encode_body(lines, @codepage_body, @gsi.mnc.to_i,

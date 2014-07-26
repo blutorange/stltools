@@ -4,6 +4,7 @@
 
 require_relative 'util_color.rb'
 require_relative 'util_monkey.rb'
+require_relative 'util_validutf8.rb'
 
 module EbuStl
     module Util

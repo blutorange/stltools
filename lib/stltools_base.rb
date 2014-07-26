@@ -155,24 +155,26 @@ module EbuStl
         
         # check input subtitles for validity
         def sanitize_lines(lines)
-            # coerce type
-            if lines.class == String                        
-                lines = lines.valid_utf8.split('\n')          #  strings can
-            elsif lines.respond_to?(:to_a)                    #  be split
-                lines = lines.to_a.flatten
-                if lines.any?{|line|!line.respond_to?(:to_s)} # array entries
-                    return false                              # convertible?
+            Util.monkey_patch(:valid_utf8 => String) do
+                # coerce type
+                if lines.class == String                        
+                    lines = lines.valid_utf8.split('\n')         #  strings can
+                elsif lines.respond_to?(:to_a)                   #  be split
+                    lines = lines.to_a.flatten
+                    if lines.any?{|line|!line.respond_to?(:to_s)}# array entries
+                        return false                             # convertible?
+                    end
+                else
+                    return false
                 end
-            else
-                return false
-            end
-
-            # convert lines to valid strings
-            lines = lines.map! do |line| 
+    
+                # convert lines to valid strings
+                lines = lines.map! do |line| 
                 line = line.to_s.valid_utf8
                 Util::Color.human_colors(line).split("\n")               
-            end.flatten             
-            
+                end.flatten             
+            end
+        
             # no subtitles exists
             return if lines.empty?
             return if lines.reduce(true){|x,l| x && l.strip.empty?}
