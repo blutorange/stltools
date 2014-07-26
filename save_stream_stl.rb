@@ -3387,7 +3387,7 @@ module EbuStl
                 elsif char == endl
                     # bold and background resets upon line break
                     if colors
-                      fsub[int] = prfx + tcbd[false] + sufx + prfx + tcbg[:black] + sufx
+                      fsub[int] = prfx + tcbd[false] + sufx + prfx + tcbg[:black] + sufx + endl_glyph
                     else
                       # no terminal codes at all
                       fsub[int] = endl_glyph
